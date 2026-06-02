@@ -1,6 +1,5 @@
 pipeline {
     agent any
-    options { skipDefaultCheckout(true) }
     environment {
         STACK  = 'todo-list-aws-staging'
         REGION = 'us-east-1'
