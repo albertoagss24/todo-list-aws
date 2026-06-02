@@ -1,0 +1,30 @@
+pipeline {
+    agent any
+    options { skipDefaultCheckout(true) }
+    environment {
+        STACK  = 'todo-list-aws-staging'
+        REGION = 'us-east-1'
+        REPO   = 'https://github.com/albertoagss24/todo-list-aws.git'
+    }
+    
+    stages {
+
+        stage('Get Code') {
+            steps {
+                git branch: 'develop', url: "${REPO}"
+                sh 'echo "Ejecutando en: $(whoami) @ $(hostname)"'
+            }
+        }
+        
+        stage('Static Test') {
+        }
+        
+        stage ('SAM Deploy') {
+        }
+        
+        stage ('Rest Test') {
+        }
+        
+        stage ('Promote') {
+        }
+}
