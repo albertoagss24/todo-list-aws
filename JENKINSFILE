@@ -1,6 +1,6 @@
 pipeline {
     agent any
-    options { skipDefaultCheckout(true) }
+    options { skipDefaultCheckout(true) } // Se salta el checkout implícito del repositorio que realiza Jenkins por defecto
     environment {
         STACK  = 'todo-list-aws-staging'
         REGION = 'us-east-1'
