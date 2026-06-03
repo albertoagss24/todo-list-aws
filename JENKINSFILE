@@ -50,7 +50,21 @@ pipeline {
             post {
                 always { junit 'result-rest.xml' }
             }
-            
+        }
+        
+        stage ('Promote') {
+            steps {
+                withCredentials([usernamePassword(credentialsID: 'github-token', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
+                    sh '''
+                        git config user.email "jenkins@cp14.local"
+                        git config user.name "Jenkins CI"
+                        git fetch origin
+                        git checkout -B master origin/master
+                        git merge --no-ff origin/develop -m "CI: promote develop -> master"
+                        git push https://$GIT_USER:$GIT_TOKEN@github.com/albertoagss24/todo-list-aws.git HEAD:master
+                    '''
+                }
+            }
         }
     }
 }
