@@ -14,5 +14,20 @@ pipeline {
                 git branch: 'develop', url: "${REPO}"
             }
         }
+        
+        stage('Static Test') {
+            steps {
+                sh '''
+                    flake8 --exit-zero --output-file=flake8.out src
+                    bandit -r src -f custom -o bandit.out \
+                        --msg-template "{relpath}:{line}: [{test_id}] {msg}" || true
+                '''
+                recordIssues tools: [
+                    flake8(name: 'Flake8', pattern: 'flake8.out),
+                    pyLint(name: 'Bandit', id: 'bandit', pattern: 'bandit.out')
+                ]
+            }
+        }
+        
     }
 }
