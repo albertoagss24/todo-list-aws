@@ -43,5 +43,14 @@ pipeline {
             }
         }
         
+        stage ('Rest Test') {
+            steps {
+                sh "BASE_URL=${env.BASE_URL} python3 -m pytest -m api --junitxml=result-rest.xml test/integration/todoApiTest.py"
+            }
+            post {
+                always { junit 'result-rest.xml' }
+            }
+            
+        }
     }
 }
