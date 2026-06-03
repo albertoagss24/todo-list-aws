@@ -23,7 +23,7 @@ pipeline {
                         --msg-template "{relpath}:{line}: [{test_id}] {msg}" || true
                 '''
                 recordIssues tools: [
-                    flake8(name: 'Flake8', pattern: 'flake8.out),
+                    flake8(name: 'Flake8', pattern: 'flake8.out'),
                     pyLint(name: 'Bandit', id: 'bandit', pattern: 'bandit.out')
                 ]
             }
