@@ -1,0 +1,70 @@
+pipeline {
+    agent any
+    options { skipDefaultCheckout(true) } // Se salta el checkout implícito del repositorio que realiza Jenkins por defecto
+    environment {
+        STACK  = 'todo-list-aws-staging'
+        REGION = 'us-east-1'
+        REPO   = 'https://github.com/albertoagss24/todo-list-aws.git'
+    }
+    
+    stages {
+
+        stage('Get Code') {
+            steps {
+                git branch: 'develop', url: "${REPO}"
+            }
+        }
+        
+        stage('Static Test') {
+            steps {
+                sh '''
+                    flake8 --exit-zero --output-file=flake8.out src
+                    bandit -r src -f custom -o bandit.out \
+                        --msg-template "{relpath}:{line}: [{test_id}] {msg}" || true
+                '''
+                recordIssues tools: [
+                    flake8(name: 'Flake8', pattern: 'flake8.out'),
+                    pyLint(name: 'Bandit', id: 'bandit', pattern: 'bandit.out')
+                ]
+            }
+        }
+        
+        stage ('Deploy') {
+            steps {
+                sh 'sam build'
+                sh 'sam deploy --config-env staging --no-confirm-changeset --no-fail-on-empty-changeset'
+                script {
+                    env.BASE_URL = sh(
+                        returnStdout: true,
+                        script: "aws cloudformation describe-stacks --stack-name ${STACK} --region ${REGION} --query \"Stacks[0].Outputs[?OutputKey=='BaseUrlApi'].OutputValue\" --output text"
+                    ).trim()
+                }
+                echo "BASE_URL = ${env.BASE_URL}"
+            }
+        }
+        
+        stage ('Rest Test') {
+            steps {
+                sh "BASE_URL=${env.BASE_URL} python3 -m pytest -m api --junitxml=result-rest.xml test/integration/todoApiTest.py"
+            }
+            post {
+                always { junit 'result-rest.xml' }
+            }
+        }
+        
+        stage ('Promote') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'github-token', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
+                    sh '''
+                        git config user.email "jenkins@cp14.local"
+                        git config user.name "Jenkins CI"
+                        git fetch origin
+                        git checkout -B master origin/master
+                        git merge --no-ff origin/develop -m "CI: promote develop -> master"
+                        git push https://$GIT_USER:$GIT_TOKEN@github.com/albertoagss24/todo-list-aws.git HEAD:master
+                    '''
+                }
+            }
+        }
+    }
+}
