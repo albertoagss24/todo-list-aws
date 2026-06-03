@@ -54,7 +54,7 @@ pipeline {
         
         stage ('Promote') {
             steps {
-                withCredentials([usernamePassword(credentialsID: 'github-token', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
+                withCredentials([usernamePassword(credentialsId: 'github-token', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
                     sh '''
                         git config user.email "jenkins@cp14.local"
                         git config user.name "Jenkins CI"
