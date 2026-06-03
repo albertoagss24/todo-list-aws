@@ -29,5 +29,19 @@ pipeline {
             }
         }
         
+        stage ('Deploy') {
+            steps {
+                sh 'sam build'
+                sh 'sam deploy --config-env staging --no-confirm-changeset --no-fail-on-empty-changeset'
+                script {
+                    env.BASE_URL = sh(
+                        returnStdout: true,
+                        script: "aws cloudformation describe-stacks --stack-name ${STACK} --region ${REGION} --query \"Stacks[0].Outputs[?OutputKey=='BaseUrlApi'].OutputValue\" --output text"
+                    ).trim()
+                }
+                echo "BASE_URL = ${env.BASE_URL}"
+            }
+        }
+        
     }
 }
