@@ -31,61 +31,75 @@ Resources:
     Type: AWS::Serverless::Function 
     Properties:
       CodeUri: src/
-      Role: !Sub "arn:aws:iam::${AWS::AccountId}:role/LabRole"
       Handler: create.create
       Runtime: python3.12
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TodosDynamoDbTable
       Events:
         Create:
           Type: Api
           Properties:
             Path: /todos
             Method: post
+
   ListTodosFunction:
     Type: AWS::Serverless::Function 
     Properties:
       CodeUri: src/
-      Role: !Sub "arn:aws:iam::${AWS::AccountId}:role/LabRole"
       Handler: list.list
       Runtime: python3.12
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TodosDynamoDbTable
       Events:
         Create:
           Type: Api
           Properties:
             Path: /todos
             Method: get
+
   GetTodoFunction:
     Type: AWS::Serverless::Function 
     Properties:
       CodeUri: src/
-      Role: !Sub "arn:aws:iam::${AWS::AccountId}:role/LabRole"
       Handler: get.get
       Runtime: python3.12
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TodosDynamoDbTable
       Events:
         Create:
           Type: Api
           Properties:
             Path: /todos/{id}
             Method: get
+
   UpdateTodoFunction:
     Type: AWS::Serverless::Function 
     Properties:
       CodeUri: src/
-      Role: !Sub "arn:aws:iam::${AWS::AccountId}:role/LabRole"
       Handler: update.update
       Runtime: python3.12
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TodosDynamoDbTable
       Events:
         Create:
           Type: Api
           Properties:
             Path: /todos/{id}
             Method: put
+
   DeleteTodoFunction:
     Type: AWS::Serverless::Function 
     Properties:
       CodeUri: src/
-      Role: !Sub "arn:aws:iam::${AWS::AccountId}:role/LabRole"
       Handler: delete.delete
       Runtime: python3.12
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref TodosDynamoDbTable
       Events:
         Create:
           Type: Api
