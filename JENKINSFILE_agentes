@@ -1,0 +1,85 @@
+pipeline {
+    agent none
+    options { skipDefaultCheckout(true) } // Se salta el checkout implícito del repositorio que realiza Jenkins por defecto
+    environment {
+        STACK  = 'todo-list-aws-staging'
+        REGION = 'us-east-1'
+        REPO   = 'https://github.com/albertoagss24/todo-list-aws.git'
+    }
+
+    stages {
+        stage('Get Code') {
+            agent any
+            steps {
+                git branch: 'develop', url: "${REPO}"
+            }
+        }
+
+        stage('Build') {
+            parallel {
+                stage('Static Test') {
+                    agent { label 'static' }
+                    steps {
+                        git branch: 'develop', url: "${REPO}"
+                        sh 'echo "[Static]    NODE=$NODE_NAME  USER=$(whoami)  HOST=$(hostname)"'
+                        sh '''
+                            export PATH=/usr/local/bin:$PATH
+                            flake8 --exit-zero --output-file=flake8.out src
+                            bandit -r src -f custom -o bandit.out \
+                                --msg-template "{relpath}:{line}: [{test_id}] {msg}" || true
+                        '''
+                        recordIssues tools: [
+                            flake8(name: 'Flake8', pattern: 'flake8.out'),
+                            pyLint(name: 'Bandit', id: 'bandit', pattern: 'bandit.out')
+                        ]
+                    }
+                }
+                stage ('Deploy') {
+                    agent { label 'built-in' }
+                    steps {
+                        sh 'echo "[Deploy]    NODE=$NODE_NAME  USER=$(whoami)  HOST=$(hostname)"'
+                        sh 'sam build'
+                        sh 'sam deploy --config-env staging --no-confirm-changeset --no-fail-on-empty-changeset'
+                        script {
+                            env.BASE_URL = sh(
+                                returnStdout: true,
+                                script: "aws cloudformation describe-stacks --stack-name ${STACK} --region ${REGION} --query \"Stacks[0].Outputs[?OutputKey=='BaseUrlApi'].OutputValue\" --output text"
+                            ).trim()
+                        }
+                        echo "BASE_URL = ${env.BASE_URL}"
+                    }
+                }
+            }
+        }
+
+        stage ('Rest Test') {
+            agent { label 'rest' }
+            steps {
+                git branch: 'develop', url: "${REPO}"
+                sh 'echo "[Rest Test]    NODE=$NODE_NAME  USER=$(whoami)  HOST=$(hostname)"'
+                sh "BASE_URL=${env.BASE_URL} python3 -m pytest -m api --junitxml=result-rest.xml test/integration/todoApiTest.py"
+            }
+            post {
+                always { junit 'result-rest.xml' }
+            }
+        }
+
+        stage ('Promote') {
+            agent { label 'built-in' }
+            steps {
+                sh 'echo "[Promote]   NODE=$NODE_NAME  USER=$(whoami)  HOST=$(hostname)"'
+                withCredentials([usernamePassword(credentialsId: 'github-token',
+                                 usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
+                    sh '''
+                        git config user.email "jenkins@cp14.local"
+                        git config user.name  "Jenkins CI"
+                        git fetch origin
+                        git checkout -B master origin/master
+                        git merge --no-ff origin/develop -m "CI: promote develop -> master"
+                        git push https://$GIT_USER:$GIT_TOKEN@github.com/albertoagss24/todo-list-aws.git HEAD:master
+                    '''
+                }
+            }
+        }
+    }
+}
