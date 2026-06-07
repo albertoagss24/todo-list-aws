@@ -12,6 +12,13 @@ pipeline {
         stage('Get Code') {
             steps {
                 git branch: 'master', url: "${REPO}"
+                // Se obtiene el archivo de configuración de SAM desde otro repositorio para evitar subirlo al repositorio principal
+                sh '''
+                    rm -rf cfg
+                    git clone -b production --depth 1 https://github.com/albertoagss24/todo-list-aws-config.git cfg
+                    cp cfg/samconfig.toml ./samconfig.toml
+                    rm -rf cfg
+                '''
             }
         }
         
