@@ -12,6 +12,14 @@ pipeline {
         stage('Get Code') {
             steps {
                 git branch: 'develop', url: "${REPO}"
+                // Descarga de samconfig.toml desde el repositorio de configuración
+                sh '''
+                    
+                    rm -rf cfg
+                    git clone -b staging --depth 1 https://github.com/albertoagss24/todo-list-aws-config.git cfg
+                    cp cfg/samconfig.toml ./samconfig.toml
+                    rm -rf cfg
+                '''
             }
         }
         
